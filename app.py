@@ -19,7 +19,7 @@ def generate_sheet():
         page_height = rows * qr_size
         sheet = Image.new("RGB", (page_width, page_height), "white")
 
-        logo = Image.open("doll.png")
+        logo = Image.open("doll1.png")
         logo_size = 100
         logo.thumbnail((logo_size, logo_size))
 
