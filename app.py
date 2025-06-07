@@ -1,58 +1,13 @@
-from flask import Flask, request, send_file, jsonify, render_template_string
+from flask import Flask, request, send_file, jsonify
 import qrcode
+from qrcode.image.styledpil import StyledPilImage
+from qrcode.image.styles.moduledrawers import RoundedModuleDrawer
+from qrcode.image.styles.colormasks import RadialGradiantColorMask
 from PIL import Image
 import io
 import os
 
 app = Flask(__name__)
-
-# Load QR reference data from pipe-separated file
-def load_qr_data(file_path="qr_mapping_pipe_separated.txt"):
-    qr_data = {}
-    if not os.path.exists(file_path):
-        return qr_data
-    with open(file_path, "r", encoding="utf-8") as f:
-        lines = f.readlines()[1:]  # skip header
-        for line in lines:
-            parts = line.strip().split("|")
-            if len(parts) == 4:
-                title, location, use, category = parts
-                qr_data[title.upper()] = {
-                    "title": title,
-                    "location": location,
-                    "use": use,
-                    "category": category
-                }
-    return qr_data
-
-@app.route("/view/<code>", methods=["GET"])
-def view_code(code):
-    qr_data = load_qr_data()
-    entry = qr_data.get(code.upper())
-    if not entry:
-        return f"<h3>No entry found for {code}</h3>", 404
-
-    html_template = """
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <title>{{ title }}</title>
-        <style>
-            body { font-family: Arial, sans-serif; margin: 40px; }
-            h2 { color: #4CAF50; }
-            .label { font-weight: bold; }
-            .info { margin-top: 15px; }
-        </style>
-    </head>
-    <body>
-        <h2>{{ title }}</h2>
-        <div class="info"><span class="label">Where to keep:</span> {{ location }}</div>
-        <div class="info"><span class="label">Use:</span> {{ use }}</div>
-        <div class="info"><span class="label">Category:</span> {{ category }}</div>
-    </body>
-    </html>
-    """
-    return render_template_string(html_template, **entry)
 
 @app.route("/generate_sheet", methods=["POST"])
 def generate_sheet():
@@ -68,24 +23,32 @@ def generate_sheet():
         logo_size = 100
         logo.thumbnail((logo_size, logo_size))
 
-        for idx, item in enumerate(data_list[:100]):
+        for idx, item in enumerate(data_list[:50]):
             code = item.get("X1", "AVX")
-            qr_url = f"https://col-qr-piperef-api-main.onrender.com/view/{code}"
+            qr_url = f"https://qr-ref-api-main.onrender.com/view/{code}"
 
             qr = qrcode.QRCode(
-                version=2,
                 error_correction=qrcode.constants.ERROR_CORRECT_H,
-                box_size=2,
-                border=1
+                box_size=10,
+                border=4,
             )
             qr.add_data(qr_url)
             qr.make(fit=True)
-            img_qr = qr.make_image(fill_color="black", back_color="white").convert("RGB")
-            img_qr = img_qr.resize((qr_size, qr_size))
 
-            pos = ((qr_size - logo_size) // 2, (qr_size - logo_size) // 2)
+            img_qr = qr.make_image(
+                image_factory=StyledPilImage,
+                module_drawer=RoundedModuleDrawer(),
+                color_mask=RadialGradiantColorMask(
+                    center_color=(0, 102, 255),
+                    edge_color=(255, 0, 255)
+                )
+            ).convert("RGB")
+
+            qr_width, qr_height = img_qr.size
+            pos = ((qr_width - logo_size) // 2, (qr_height - logo_size) // 2)
             img_qr.paste(logo, pos, mask=logo if logo.mode == 'RGBA' else None)
 
+            img_qr = img_qr.resize((qr_size, qr_size))
             x = (idx % cols) * qr_size
             y = (idx // cols) * qr_size
             sheet.paste(img_qr, (x, y))
