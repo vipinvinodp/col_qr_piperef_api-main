@@ -70,7 +70,7 @@ def generate_sheet():
 
         for idx, item in enumerate(data_list[:50]):
             code = item.get("X1", "AVX")
-            qr_url = f"https://qr-piperef-api-main.onrender.com/view/{code}"
+            qr_url = f"https://col-qr-piperef-api-main.onrender.com/view/{code}"
 
             qr = qrcode.QRCode(
                 version=2,
