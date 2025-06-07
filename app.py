@@ -68,7 +68,7 @@ def generate_sheet():
         logo_size = 100
         logo.thumbnail((logo_size, logo_size))
 
-        for idx, item in enumerate(data_list[:50]):
+        for idx, item in enumerate(data_list[:100]):
             code = item.get("X1", "AVX")
             qr_url = f"https://col-qr-piperef-api-main.onrender.com/view/{code}"
 
